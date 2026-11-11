@@ -12,7 +12,7 @@ export default function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
-  const [downloadingId, setDownloadingId] = useState('');
+  const [downloadingIds, setDownloadingIds] = useState(() => new Set());
   const [downloadError, setDownloadError] = useState('');
 
   useEffect(() => {
@@ -62,7 +62,7 @@ export default function App() {
   }
 
   async function handleDownload(document) {
-    setDownloadingId(document.id);
+    setDownloadingIds((currentIds) => new Set(currentIds).add(document.id));
     setDownloadError('');
 
     try {
@@ -70,7 +70,11 @@ export default function App() {
     } catch (error) {
       setDownloadError(error.message);
     } finally {
-      setDownloadingId('');
+      setDownloadingIds((currentIds) => {
+        const nextIds = new Set(currentIds);
+        nextIds.delete(document.id);
+        return nextIds;
+      });
     }
   }
 
@@ -124,7 +128,7 @@ export default function App() {
               isLoading={isLoading}
               error={loadError}
               downloadError={downloadError}
-              downloadingId={downloadingId}
+              downloadingIds={downloadingIds}
               onRefresh={refreshDocuments}
               onDownload={handleDownload}
             />

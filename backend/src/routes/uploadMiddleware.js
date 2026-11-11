@@ -60,6 +60,12 @@ function parseSingleFile(req, res, next) {
       error.message = 'A requisição multipart é inválida.';
     }
 
+    if (!error.statusCode && !(error instanceof multer.MulterError)) {
+      error.statusCode = 500;
+      error.code = 'UPLOAD_FAILED';
+      error.message = 'Não foi possível gravar o arquivo enviado.';
+    }
+
     return next(error);
   });
 }

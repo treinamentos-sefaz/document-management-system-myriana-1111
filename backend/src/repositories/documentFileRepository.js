@@ -1,4 +1,5 @@
-const fs = require('node:fs/promises');
+const fs = require('node:fs');
+const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 const { storageDirectory } = require('../config/storage');
 
@@ -10,13 +11,33 @@ function getFilePath(storageKey) {
   return path.join(storageDirectory, storageKey);
 }
 
-async function read(storageKey) {
-  return fs.readFile(getFilePath(storageKey));
+async function openReadStream(storageKey) {
+  const stream = fs.createReadStream(getFilePath(storageKey));
+
+  try {
+    await new Promise((resolve, reject) => {
+      const onOpen = () => {
+        stream.off('error', onError);
+        resolve();
+      };
+      const onError = (error) => {
+        stream.off('open', onOpen);
+        reject(error);
+      };
+
+      stream.once('open', onOpen);
+      stream.once('error', onError);
+    });
+    return stream;
+  } catch (error) {
+    stream.destroy();
+    throw error;
+  }
 }
 
 async function remove(storageKey) {
   try {
-    await fs.unlink(getFilePath(storageKey));
+    await fsPromises.unlink(getFilePath(storageKey));
   } catch (error) {
     if (error.code !== 'ENOENT') {
       throw error;
@@ -25,6 +46,6 @@ async function remove(storageKey) {
 }
 
 module.exports = {
-  read,
+  openReadStream,
   remove,
 };

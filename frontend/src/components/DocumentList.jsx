@@ -38,7 +38,7 @@ export default function DocumentList({
   isLoading,
   error,
   downloadError,
-  downloadingId,
+  downloadingIds,
   onRefresh,
   onDownload,
 }) {
@@ -84,7 +84,7 @@ export default function DocumentList({
               </div>
               <DownloadButton
                 document={document}
-                downloading={downloadingId === document.id}
+                downloading={downloadingIds.has(document.id)}
                 onDownload={onDownload}
               />
             </li>

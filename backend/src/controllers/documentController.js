@@ -20,10 +20,12 @@ async function listDocuments(req, res, next) {
 
 async function downloadDocument(req, res, next) {
   try {
-    const { document, content } = await documentService.getDocumentForDownload(req.params.id);
+    const { document, stream } = await documentService.getDocumentForDownload(req.params.id);
+    stream.once('error', next);
     res.attachment(document.originalName);
     res.type(document.mimeType);
-    return res.status(200).send(content);
+    res.set('Content-Length', document.size);
+    return stream.pipe(res);
   } catch (error) {
     return next(error);
   }
