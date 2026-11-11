@@ -33,7 +33,11 @@ test('o app backend é exportado', () => {
   assert.strictEqual(typeof app, 'function', 'o app Express deve ser uma função');
 });
 
-test('envia, lista e baixa um documento', async () => {
+test('envia, lista em ordem determinística e baixa documentos', async () => {
+  const emptyListResponse = await fetch(`${baseUrl}/documents`);
+  assert.strictEqual(emptyListResponse.status, 200);
+  assert.deepStrictEqual((await emptyListResponse.json()).documents, []);
+
   const formData = new FormData();
   formData.append('file', new Blob(['conteudo de teste'], { type: 'text/plain' }), 'notas.txt');
 
@@ -52,10 +56,23 @@ test('envia, lista e baixa um documento', async () => {
   assert.ok(document.uploadedAt);
   assert.ok(!Object.hasOwn(document, 'storageKey'));
 
+  const secondFormData = new FormData();
+  secondFormData.append('file', new Blob(['segundo documento'], { type: 'text/plain' }), 'segundo.txt');
+  const secondUploadResponse = await fetch(`${baseUrl}/upload`, {
+    method: 'POST',
+    body: secondFormData,
+  });
+  assert.strictEqual(secondUploadResponse.status, 201);
+  const { document: secondDocument } = await secondUploadResponse.json();
+
   const listResponse = await fetch(`${baseUrl}/documents`);
   assert.strictEqual(listResponse.status, 200);
   const { documents } = await listResponse.json();
-  assert.deepStrictEqual(documents.map((item) => item.id), [document.id]);
+  const expectedOrder = [document, secondDocument].sort((first, second) => {
+    const dateDifference = Date.parse(second.uploadedAt) - Date.parse(first.uploadedAt);
+    return dateDifference || first.id.localeCompare(second.id);
+  });
+  assert.deepStrictEqual(documents.map((item) => item.id), expectedOrder.map((item) => item.id));
 
   const downloadResponse = await fetch(`${baseUrl}/documents/${document.id}/download`);
   assert.strictEqual(downloadResponse.status, 200);
